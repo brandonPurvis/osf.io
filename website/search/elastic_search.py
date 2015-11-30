@@ -5,6 +5,7 @@ from __future__ import division
 import re
 import copy
 import math
+import base64
 import logging
 import unicodedata
 import functools
@@ -70,6 +71,13 @@ except ConnectionError as e:
             "was a problem starting the elasticsearch interface. Is "
             "elasticsearch running?")
     es = None
+
+
+def get_content_from_file():
+    return """This is a temporary function.
+     If you see this then the placeholder is still being used.
+     Please correct this.
+     """
 
 
 def requires_search(func):
@@ -467,6 +475,7 @@ def update_file(file_, index=None, delete=False):
         'node_title': file_.node.title,
         'parent_id': file_.node.parent_node._id if file_.node.parent_node else None,
         'is_registration': file_.node.is_registration,
+        'attachment': base64.encodestring(get_content_from_file()),  # TODO:Current get_content_from_file is placeholder
     }
 
     es.index(

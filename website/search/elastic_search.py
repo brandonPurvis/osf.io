@@ -188,9 +188,21 @@ def search(query, index=None, doc_type='_all'):
     aggregations = get_aggregations(aggs_query, doc_type=doc_type)
     counts = get_counts(count_query, index)
 
+    # Insert text highlighting into query
+    query['highlight'] = {
+        'encoder': 'html',
+        'pre_tags': ['<strong>'],
+        'post_tags': ['</strong>'],
+        'fields': {
+            'attachment': {},
+            'content': {},
+            'title': {},
+            'name': {},
+        }
+    }
+
     # Run the real query and get the results
     raw_results = es.search(index=index, doc_type=doc_type, body=query)
-
     results = [hit['_source'] for hit in raw_results['hits']['hits']]
     return_value = {
         'results': format_results(results),
@@ -524,9 +536,6 @@ def create_index(index=None):
                          for field in analyzed_fields}
             mapping['properties'].update(analyzers)
 
-        if type_ == 'file':
-            mapping['properties'].update({'attachment': {'type': 'attachment'}})
-
         if type_ == 'user':
             fields = {
                 'job': {
@@ -547,6 +556,20 @@ def create_index(index=None):
                 },
             }
             mapping['properties'].update(fields)
+
+        if type_ == 'file':
+            mapping['properties'].update({
+                'attachment': {
+                    'type': 'attachment',
+                    'fields': {
+                        'attachment': {
+                            'store': 'yes',
+                            'term_vector': 'with_positions_offsets',
+                        },
+                    }
+                }
+            })
+
         es.indices.put_mapping(index=index, doc_type=type_, body=mapping, ignore=[400, 404])
 
 @requires_search

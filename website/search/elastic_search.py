@@ -515,6 +515,9 @@ def create_index(index=None):
                          for field in analyzed_fields}
             mapping['properties'].update(analyzers)
 
+        if type_ == 'file':
+            mapping['properties'].update({'attachment': {'type': 'attachment'}})
+
         if type_ == 'user':
             fields = {
                 'job': {

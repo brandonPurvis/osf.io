@@ -204,6 +204,16 @@ def search(query, index=None, doc_type='_all'):
     # Run the real query and get the results
     raw_results = es.search(index=index, doc_type=doc_type, body=query)
     results = [hit['_source'] for hit in raw_results['hits']['hits']]
+    highlights = [hit.get('highlight', None) for hit in raw_results['hits']['hits']]
+
+    for r, h in zip(results, highlights):
+        if not h:
+            r['highlight'] = None
+        elif 'attachment' in h.keys():
+            r['highlight'] = h['attachment']
+        else:
+            r['highlight'] = None
+
     return_value = {
         'results': format_results(results),
         'counts': counts,
@@ -252,6 +262,7 @@ def format_result(result, parent_id=None):
         'date_registered': result.get('registered_date'),
         'n_wikis': len(result['wikis']),
         'license': result.get('license'),
+        'highlight': result.get('highlight')
     }
 
     return formatted_result

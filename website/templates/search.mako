@@ -155,6 +155,9 @@
             <!-- ko if: parent_url --> From: <a data-bind="attr.href: parent_url">{{ parent_title }} /</a> <!-- /ko -->
             <!-- ko if: !parent_url --> From: <span data-bind="if: parent_title">{{ parent_title }} /</span> <!-- /ko -->
             <a data-bind="attr.href: node_url">{{ node_title }}</a>
+            <div data-bind="html: highlight">
+                <p data-bind="if: highlight">{{ highlight }}</p>
+            </div>
         </h5>
         <!-- ko if: tags.length > 0 --> <div data-bind="template: 'tag-cloud'"></div> <!-- /ko -->
     </script>

@@ -9,6 +9,7 @@ import base64
 import logging
 import unicodedata
 import functools
+import requests
 
 import six
 
@@ -30,7 +31,7 @@ from website.filters import gravatar
 from website.models import User, Node
 from website.search import exceptions
 from website.search.util import build_query
-from website.util import sanitize
+from website.util import sanitize, api_v2_url
 from website.views import validate_page_num
 from website.project.licenses import serialize_node_license_record
 
@@ -73,11 +74,28 @@ except ConnectionError as e:
     es = None
 
 
-def get_content_from_file():
-    return """This is a temporary function.
-     If you see this then the placeholder is still being used.
-     Please correct this.
-     """
+def get_content_from_file(file_node):
+    """ Return downloaded content of file."""
+    if not file_node.provider == 'osfstorage':
+        return ''
+
+    if not file_node.name.endswith(('.pdf', '.doc', '.docx', '.txt')):
+        return ''
+
+    file_data_url = api_v2_url('nodes/{nid}/files/{provider}/{fid}'.format(
+        nid=file_node.node._id,
+        provider=file_node.provider,
+        fid=file_node._id
+    ))
+
+    # If the download fails, it is automatically retried.
+    file_data = requests.get(file_data_url).json()
+    if 'errors' in file_data.keys():
+        return ''
+
+    download_url = file_data['data']['links']['download']
+    file_content = requests.get(download_url).content
+    return file_content
 
 
 def requires_search(func):
@@ -488,6 +506,8 @@ def update_file(file_, index=None, delete=False):
     )
     node_url = '/{node_id}/'.format(node_id=file_.node._id)
 
+    file_content = get_content_from_file(file_)
+
     file_doc = {
         'id': file_._id,
         'deep_url': file_deep_url,
@@ -498,7 +518,7 @@ def update_file(file_, index=None, delete=False):
         'node_title': file_.node.title,
         'parent_id': file_.node.parent_node._id if file_.node.parent_node else None,
         'is_registration': file_.node.is_registration,
-        'attachment': base64.encodestring(get_content_from_file()),  # TODO:Current get_content_from_file is placeholder
+        'attachment': base64.encodestring(file_content),
     }
 
     es.index(
